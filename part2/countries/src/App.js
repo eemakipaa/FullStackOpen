@@ -1,105 +1,80 @@
-// Jatka kohdasta 2.13
-// Kakkososan hommiin kulunut aikaa 12 tuntia
+/**
+ * Full Stack open 2021 - Countries
+ * Author: Eero Mäkipää
+ * 
+ * This application displays information about countries. User types the
+ * query in input field. When the sum of matching countries is 10 or less,
+ * the application shows list of countries matching the search. User can
+ * choose country to show more information either by clicking the button or
+ * typing the name so there is only one country that matches the query.
+ */
 
 import React, {useState, useEffect} from 'react'
 import axios from 'axios'
+import Search from './components/Search'
+import CountryList from './components/CountryList'
 
-// Components
-const Search = (props) => {
-    return (
-        <div>
-            Find countries: <input value={props.value} onChange={props.onChange} />
-        </div>
-    )
-}
-
-const CountryList = (props) => {
-  if (props.countriesToShow.length > 10) {
-      return(<div>Too many matches! Please specify your query.</div>)
-  } else {
-      if (props.countriesToShow.length > 1) {
-          return(
-              <div>
-                  {props.countriesToShow.map(country =>
-                    <CountryName key={country.cca3} name={country.name.common} />
-                  )}
-              </div>
-          )
-      } else {
-          if (props.countriesToShow.length > 0) {
-            return(
-                <div>
-                    <CountryInfo
-                        name={props.countriesToShow[0].name.common}
-                        officialName={props.countriesToShow[0].name.official}
-                        capital={props.countriesToShow[0].capital}
-                        languages={props.countriesToShow[0].languages}
-                        flags={props.countriesToShow[0].flags}
-                    />
-                </div>
-              )
-          }
-    return(
-        <div></div>
-    )
-      }
-  }
-}
-
-const CountryName = (props) => {
-  return(
-      <div>
-          {props.name}
-      </div>
-  )
-}
-
-const CountryInfo = (props) => {
-  return (
-      <div>
-          <h1>{props.name}</h1>
-          <p>Official name: {props.officialName} </p>
-          <p>Capital: {props.capital} </p>
-          <h2>Languages</h2>
-          <ul>
-             {Object.values(props.languages).map(lan => <li key={lan}>{lan}</li>)}
-          </ul>
-              <img src={props.flags.png} alt={"Flag of " + props.name}/>
-      </div>
-  )
-}
+const API_KEY = process.env.REACT_APP_API_KEY
 
 // App component to render
 const App = () => {
-    //State hooks
-    const [countries, setCountries] = useState([])
-    const [countriesToShow, setCountriesToShow] = useState([])
-    const [searchQuery, setSearchQuery] = useState("")
+  //State hooks
+  const [countries, setCountries] = useState([])
+  const [countriesToShow, setCountriesToShow] = useState([])
+  const [searchQuery, setSearchQuery] = useState("")
+  const [weatherToShow, setWeatherToShow] = useState([])
 
-    // Effect hook to get data from restcountrties api
-    useEffect(() => {
-      axios
-        .get('https://restcountries.com/v3.1/all')
-        .then(response => {
-            setCountries(response.data)
-        })
-    },[])
+  // Effect hook to get data from restcountrties api
+  useEffect(() => {
+    axios
+      .get('https://restcountries.com/v3.1/all')
+      .then(response => {
+          setCountries(response.data)
+      })
+  },[])
 
-    // Event handlers
-    const handleSearchQuery = (event) => {
-      setSearchQuery(event.target.value)
-      setCountriesToShow(
-        countries.filter( country => 
-            country.name.common.toLocaleLowerCase()
-            .includes(event.target.value.toLocaleLowerCase())
-        )
+  // Event handlers
+  const handleSearchQuery = (event) => {
+    setSearchQuery(event.target.value)
+    setCountriesToShow(
+      countries.filter( country => 
+        country.name.common.toLocaleLowerCase()
+        .includes(event.target.value.toLocaleLowerCase())
       )
+    )
+  }
+  
+  const handleShowCountry = (event) => {
+    const countryToShow = countries.filter( country => country.cca3 === event.target.id )
+    setCountriesToShow(countryToShow)
+    const params = {
+      access_key: API_KEY,
+      query: countryToShow[0].capital[0]
     }
 
-    return (
+    axios.get('http://api.weatherstack.com/current', {params})
+      .then(response => {
+        console.log(response)
+        const apiResponse = response.data;
+        setWeatherToShow( {
+          location: apiResponse.location.name,
+          temperature: apiResponse.current.temperature,
+          description: apiResponse.current.weather_descriptions
+        })
+      }).catch(error => {
+        console.log(error);
+      });
+  }
+
+  // App return statement
+  return (
     <div>
-        <Search value={searchQuery} onChange={handleSearchQuery} />
-        <CountryList countriesToShow={countriesToShow}/>
+      <Search value={searchQuery} onChange={handleSearchQuery} />
+      <CountryList
+        countriesToShow={countriesToShow}
+        weather={weatherToShow}
+        handleShowCountry={handleShowCountry}
+      />
     </div>
   )
 }
