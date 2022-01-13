@@ -51,7 +51,6 @@ const App = () => {
       access_key: API_KEY,
       query: countryToShow[0].capital[0]
     }
-
     axios.get('http://api.weatherstack.com/current', {params})
       .then(response => {
         console.log(response)
